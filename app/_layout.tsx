@@ -1,39 +1,62 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { ClerkProvider } from "@clerk/clerk-expo";
+import { Stack } from "expo-router";
+import { tokenCache } from "../utils/clerk";
+import {
+  ThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+} from "@react-navigation/native";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
+import ToastManager from "toastify-react-native";
+import { useFonts } from "expo-font";
+import Splash from "@/components/Splash";
+import { width } from "@/constants/Styles";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// SplashScreen.preventAutoHideAsync();
+
+const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export default function RootLayout() {
+  // const { isLoaded } = useAuth();
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+  if (!CLERK_PUBLISHABLE_KEY) {
+    throw new Error("Missing Clerk Publishable Key");
+  }
+  const [loaded] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    Sora: require("../assets/fonts/Sora-VariableFont_wght.ttf"),
+  });
+  // if (!isLoaded) {
+  //   return null;
+  // }
 
   if (!loaded) {
-    return null;
+    return <Splash />;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      tokenCache={tokenCache}
+    >
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <ToastManager
+          duration={3500}
+          height={50}
+          width={width - 20}
+          textStyle={{ fontSize: 10 }}
+        />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </ClerkProvider>
   );
 }
